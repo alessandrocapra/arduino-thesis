@@ -12,12 +12,20 @@ String host     = "192.168.2.132";                 // change with correct host o
 const int port  = 5001;
 SocketIOClient client;
 
+// implementation tryouts variables
+long randNumber;
+
 void setup() {
   Serial.begin(115200);
   delay(10);
   
   wifiConnection();
-//  socket.connect(host, port);
+
+  // if analog input pin 0 is unconnected, random analog
+  // noise will cause the call to randomSeed() to generate
+  // different seed numbers each time the sketch runs.
+  // randomSeed() will then shuffle the random function.
+  randomSeed(analogRead(0));
 }
 
 void loop() {
@@ -56,11 +64,16 @@ void wifiConnection() {
   }
 }
 
-void connectToServer() {
-
-}
-
 void sendDataToServer(String key) {
-  delay(5000);                                        // to tune and decide how to send data coming from pressure sensor
-  client.emit("sensor", "{\"message\":\"bella\"}");
+  delay(1500);                                        // to tune and decide how to send data coming from pressure sensor
+
+  randNumber = random(300);
+  
+  if(randNumber < 100){
+    client.emit("sensor", "{\"message\":\"left\"}");
+  } else if(randNumber >= 100 && randNumber < 200){
+    client.emit("sensor", "{\"message\":\"right\"}");
+  } else {
+    client.emit("sensor", "{\"message\":\"up\"}");
+  }
 }
