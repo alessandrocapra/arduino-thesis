@@ -61,6 +61,6 @@ void connectToServer() {
 }
 
 void sendDataToServer(String key) {
-  delay(5000);
+  delay(5000);                                        // to tune and decide how to send data coming from pressure sensor
   client.emit("sensor", "{\"message\":\"bella\"}");
 }
