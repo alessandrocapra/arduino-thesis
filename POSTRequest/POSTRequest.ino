@@ -29,21 +29,28 @@ int sensorValue = 0;
 float Vout = 0;
 float P = 0;
 
-// counter var for keeping socketIO connection alive
-unsigned long startTime;
+// vars to calculate offset
+int i = 0;
+int sum = 0;
+int offset = 0;
 
-unsigned long previousMillis = 0;
-long interval = 5000;
-unsigned long lastreply = 0;
-unsigned long lastsend = 0;
+// run task every X seconds (for keeping socketio connection alive)
+typedef struct t  {
+  unsigned long tStart;
+  unsigned long tTimeout;
+};
+
+//Tasks and their Schedules.
+t t_func1 = {0, 30000}; //Run every 30s
 
 void setup() {
 
   Serial.begin(115200);
   delay(10);
 
+  calibratePressureSensor();
+  
   // We start by connecting to a WiFi network
-
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
@@ -67,39 +74,45 @@ void setup() {
   {
     client.emit("sensor", "{\"message\":\"Arduino connected!\"}");
   }
-
 }
 
 void loop() {
-  // refresh socketIO connection every 30 secs
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis > interval)
-  {
-    previousMillis = currentMillis;
-    client.heartbeat(0);
 
-    lastsend = millis();
+  // TODO: call client.monitor() every 30 seconds to keep connection ALIVE!
+  if (tCheck(&t_func1)) {
+    func1();
+    tRun(&t_func1);
   }
 
-  //  if (millis() - startTime < 3000) {
-  //    client.emit("hello", "{\"message\":\"Ciao server!\"}");
-  //  }
+  sensorValue = analogRead(sensorPin) - offset;
+  Vout = (5 * sensorValue) / 1024.0;
+  P = Vout - 2.5;
 
-  if (client.monitor()) {
-    // do something
+  if (P * 1000 > 800.0) {
+    String messageContents = "{\"message\":\"up\"}";
+    client.emit("sensor", messageContents);
+  } else if (P * 1000 > 200) {
+    String messageContents = "{\"message\":\"right\"}";
+    client.emit("sensor", messageContents);
+  } else if (P * 1000 < -200.0) {
+    String messageContents = "{\"message\":\"left\"}";
+    client.emit("sensor", messageContents);
+  } else {
+    String messageContents = "{\"message\":\"turn\"}";
+    client.emit("sensor", messageContents);
   }
 
-  //  if (!client.connected()) {
-  //    client.reconnect(host);
-  //    client.emit("sensor", "{\"message\":\"Arduino re-connected!\"}");
-  //  }
+  String messageContents = "{\"pressure\":\"";
+  messageContents += P * 1000;
+  messageContents += "\"}";
 
-  // Reading the pressure sensor values
+  client.emit("pressure", messageContents);
 
+  delay(10);
+}
+
+void calibratePressureSensor() {
   //// calculate the offset
-  int i = 0;
-  int sum = 0;
-  int offset = 0;
   Serial.println("init...");
   for (i = 0; i < 10; i++)
   {
@@ -107,39 +120,31 @@ void loop() {
     sum += sensorValue;
   }
 
-  // take the average value
+  //// take the average value
   offset = sum / 10.0;
   Serial.println("Ok");
 
-  while (1)
-  {
-    sensorValue = analogRead(sensorPin) - offset;
-    Vout = (5 * sensorValue) / 1024.0;
-    P = Vout - 2.5;
-    Serial.print("Pressure = " );
-    Serial.print(P * 1000);
-    Serial.println("Pa");
+  sensorValue = analogRead(sensorPin) - offset;
+  Vout = (5 * sensorValue) / 1024.0;
+  P = Vout - 2.5;
+  Serial.print("Pressure = " );
+  Serial.print(P * 1000);
+  Serial.println("Pa");
+}
 
-    if (P * 1000 > 800.0) {
-      String messageContents = "{\"message\":\"up\"}";
-      client.emit("sensor", messageContents);
-    } else if (P * 1000 > 200) {
-      String messageContents = "{\"message\":\"right\"}";
-      client.emit("sensor", messageContents);
-    } else if (P * 1000 < -200.0) {
-      String messageContents = "{\"message\":\"left\"}";
-      client.emit("sensor", messageContents);
-    } else {
-      String messageContents = "{\"message\":\"turn\"}";
-      client.emit("sensor", messageContents);
-    }
+// Functions to keep the connection alive
 
-    String messageContents = "{\"pressure\":\"";
-    messageContents += P * 1000;
-    messageContents += "\"}";
-    client.emit("pressure", messageContents);
+bool tCheck (struct t *t ) {
+  if (millis() > t->tStart + t->tTimeout) return true;
+}
 
-    delay(10);
+void tRun (struct t *t) {
+  t->tStart = millis();
+}
 
+void func1 (void) {
+  //This executes every 30s.
+  if (client.monitor()) {
+    client.emit("renewSocketConnection", "test");
   }
 }
