@@ -24,10 +24,10 @@ const char* host = "duchennegame.herokuapp.com";
 int port = 9707;
 
 // variables to read pressure sensor
-int sensorPin = A0;   
-int sensorValue = 0; 
-float Vout=0;
-float P=0;
+int sensorPin = A0;
+int sensorValue = 0;
+float Vout = 0;
+float P = 0;
 
 // counter var for keeping socketIO connection alive
 unsigned long startTime;
@@ -38,9 +38,6 @@ unsigned long lastreply = 0;
 unsigned long lastsend = 0;
 
 void setup() {
-
-  // set button pin as an input
-  pinMode(BUTTON_PIN, INPUT);
 
   Serial.begin(115200);
   delay(10);
@@ -70,7 +67,7 @@ void setup() {
   {
     client.emit("sensor", "{\"message\":\"Arduino connected!\"}");
   }
- 
+
 }
 
 void loop() {
@@ -79,57 +76,26 @@ void loop() {
   if (currentMillis - previousMillis > interval)
   {
     previousMillis = currentMillis;
-    //client.heartbeat(0);
-    Serial.print("**************************************  ");
-    Serial.println(lastsend);
-    client.send("atime", "message", "Time please?");
+    client.heartbeat(0);
+
     lastsend = millis();
-    Serial.print("**************************************  ");
-    Serial.println(lastsend);
-  }
-  
-  if (client.monitor())
-  {
-    lastreply = millis(); 
-  }
-  
-  if(millis()-startTime < 3000){
-    client.emit("hello", "{\"message\":\"Ciao server!\"}");
-  }
-  
-  client.monitor();
-
-  if (!client.connected()) {
-    client.reconnect(host);
-    client.emit("sensor", "{\"message\":\"Arduino re-connected!\"}");
   }
 
-  // read the pushbutton input pin:
-  buttonState = digitalRead(BUTTON_PIN);
+  //  if (millis() - startTime < 3000) {
+  //    client.emit("hello", "{\"message\":\"Ciao server!\"}");
+  //  }
 
-  // compare the buttonState to its previous state
-  if (buttonState != lastButtonState) {
-    // if the state has changed, increment the counter
-    if (buttonState == LOW) {
-      // if the current state is LOW then the button went from off to on:
-      buttonPushCounter++;
-      Serial.println("on");
-      Serial.print("number of button pushes: ");
-      Serial.println(buttonPushCounter);
-
-      client.emit("sensor", "{\"message\":\"up\"}");
-    } else {
-      // if the current state is HIGH then the button went from on to off:
-      Serial.println("off");
-    }
-    // Delay a little bit to avoid bouncing
-    delay(50);
+  if (client.monitor()) {
+    // do something
   }
-  // save the current state as the last state, for next time through the loop
-  lastButtonState = buttonState;
+
+  //  if (!client.connected()) {
+  //    client.reconnect(host);
+  //    client.emit("sensor", "{\"message\":\"Arduino re-connected!\"}");
+  //  }
 
   // Reading the pressure sensor values
-  
+
   //// calculate the offset
   int i = 0;
   int sum = 0;
@@ -144,21 +110,36 @@ void loop() {
   // take the average value
   offset = sum / 10.0;
   Serial.println("Ok");
-  
+
   while (1)
   {
     sensorValue = analogRead(sensorPin) - offset;
     Vout = (5 * sensorValue) / 1024.0;
     P = Vout - 2.5;
-//    Serial.print("Pressure = " );
-//    Serial.print(P * 1000);
-//    Serial.println("Pa");
+    Serial.print("Pressure = " );
+    Serial.print(P * 1000);
+    Serial.println("Pa");
+
+    if (P * 1000 > 800.0) {
+      String messageContents = "{\"message\":\"up\"}";
+      client.emit("sensor", messageContents);
+    } else if (P * 1000 > 200) {
+      String messageContents = "{\"message\":\"right\"}";
+      client.emit("sensor", messageContents);
+    } else if (P * 1000 < -200.0) {
+      String messageContents = "{\"message\":\"left\"}";
+      client.emit("sensor", messageContents);
+    } else {
+      String messageContents = "{\"message\":\"turn\"}";
+      client.emit("sensor", messageContents);
+    }
 
     String messageContents = "{\"pressure\":\"";
     messageContents += P * 1000;
     messageContents += "\"}";
-    
     client.emit("pressure", messageContents);
+
     delay(10);
+
   }
 }
