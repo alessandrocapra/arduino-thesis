@@ -28,6 +28,8 @@ int sensorPin = A0;
 int sensorValue = 0;
 float Vout = 0;
 float P = 0;
+float kPa = 0;
+
 
 // vars to calculate offset
 int i = 0;
@@ -49,7 +51,7 @@ void setup() {
   delay(10);
 
   calibratePressureSensor();
-  
+
   // We start by connecting to a WiFi network
   Serial.println();
   Serial.println();
@@ -87,14 +89,25 @@ void loop() {
   sensorValue = analogRead(sensorPin) - offset;
   Vout = (5 * sensorValue) / 1024.0;
   P = Vout - 2.5;
+  float mappedValue = P * 1000;
+  //  float mappedValue = map(P*1000, -2475.00, 1879.00, -2000.00, 2000.00);
 
-  if (P * 1000 > 800.0) {
+  // mapping the values taking into consideration the measuring error rate
+  if (mappedValue < 0.102) {
+    mappedValue = -2000;
+  } else if (mappedValue > 0.921) {
+    mappedValue = 2000;
+  } else { 
+      mappedValue = map(mappedValue, 102, 921, -2000, 2000);
+  }
+
+  if (mappedValue > 800.0 || mappedValue < -800.0) {
     String messageContents = "{\"message\":\"up\"}";
     client.emit("sensor", messageContents);
-  } else if (P * 1000 > 200) {
+  } else if (mappedValue > 200) {
     String messageContents = "{\"message\":\"right\"}";
     client.emit("sensor", messageContents);
-  } else if (P * 1000 < -200.0) {
+  } else if (mappedValue < -200.0) {
     String messageContents = "{\"message\":\"left\"}";
     client.emit("sensor", messageContents);
   } else {
@@ -103,7 +116,7 @@ void loop() {
   }
 
   String messageContents = "{\"pressure\":\"";
-  messageContents += P * 1000;
+  messageContents += mappedValue;
   messageContents += "\"}";
 
   client.emit("pressure", messageContents);
@@ -125,7 +138,7 @@ void calibratePressureSensor() {
   Serial.println("Ok");
 
   sensorValue = analogRead(sensorPin) - offset;
-  Vout = (5 * sensorValue) / 1024.0;
+  Vout = (5 + sensorValue) / 1024.0;
   P = Vout - 2.5;
   Serial.print("Pressure = " );
   Serial.print(P * 1000);
