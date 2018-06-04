@@ -24,6 +24,7 @@ const char* host = "duchennegame.herokuapp.com";
 int port = 9707;
 
 // variables to read pressure sensor
+float inputVoltage = 0.896;
 int sensorPin = A0;
 int sensorValue = 0;
 float Vout = 0;
@@ -87,20 +88,18 @@ void loop() {
   }
 
   sensorValue = analogRead(sensorPin) - offset;
-  Vout = (5 * sensorValue) / 1024.0;
-  P = Vout - 2.5;
-  float mappedValue = P * 1000;
-  //  float mappedValue = map(P*1000, -2475.00, 1879.00, -2000.00, 2000.00);
+  Serial.print("sensorValue: ");
+  Serial.println(sensorValue);
+    
+  //  inputVoltage is the current given to the analog pin of the Adafruit 
+  Vout = ((inputVoltage*1000) * sensorValue) / 1024;
+  Serial.print("adaptedSensorValue (Vout): ");
+  Serial.println(Vout);
 
-  // mapping the values taking into consideration the measuring error rate
-  if (mappedValue < 0.102) {
-    mappedValue = -2000;
-  } else if (mappedValue > 0.921) {
-    mappedValue = 2000;
-  } else { 
-      mappedValue = map(mappedValue, 102, 921, -2000, 2000);
-  }
-
+  float mappedValue = map(Vout, 0, 896, -2000, 2000);
+  Serial.print("mappedValue: ");
+  Serial.println(mappedValue);
+  
   if (mappedValue > 800.0 || mappedValue < -800.0) {
     String messageContents = "{\"message\":\"up\"}";
     client.emit("sensor", messageContents);
