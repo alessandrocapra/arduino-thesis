@@ -88,37 +88,28 @@ void loop() {
   }
 
   sensorValue = analogRead(sensorPin) - offset;
-  Serial.print("sensorValue: ");
-  Serial.println(sensorValue);
-    
-  //  inputVoltage is the current given to the analog pin of the Adafruit 
-  Vout = ((inputVoltage*1000) * sensorValue) / 1024;
-  Serial.print("adaptedSensorValue (Vout): ");
-  Serial.println(Vout);
+  Vout = (5 * sensorValue) / 1024.0;
+  P = Vout - 2.5;
 
-  float mappedValue = map(Vout, 0, 896, -2000, 2000);
-  Serial.print("mappedValue: ");
-  Serial.println(mappedValue);
-  
-  if (mappedValue > 800.0 || mappedValue < -800.0) {
-    String messageContents = "{\"message\":\"up\"}";
-    client.emit("sensor", messageContents);
-  } else if (mappedValue > 200) {
-    String messageContents = "{\"message\":\"right\"}";
-    client.emit("sensor", messageContents);
-  } else if (mappedValue < -200.0) {
-    String messageContents = "{\"message\":\"left\"}";
-    client.emit("sensor", messageContents);
+  if (P * 1000 > 800.0) {
+    String messageContents = "{\"m\":\"u\"}";
+    client.emit("s", messageContents);
+  } else if (P * 1000 > 200) {
+    String messageContents = "{\"m\":\"r\"}";
+    client.emit("s", messageContents);
+  } else if (P * 1000 < -200.0) {
+    String messageContents = "{\"m\":\"l\"}";
+    client.emit("s", messageContents);
   } else {
-    String messageContents = "{\"message\":\"turn\"}";
-    client.emit("sensor", messageContents);
+    String messageContents = "{\"m\":\"t\"}";
+    client.emit("s", messageContents);
   }
 
-  String messageContents = "{\"pressure\":\"";
-  messageContents += mappedValue;
+  String messageContents = "{\"p\":\"";
+  messageContents += P * 1000;
   messageContents += "\"}";
 
-  client.emit("pressure", messageContents);
+  client.emit("p", messageContents);
 
   delay(10);
 }
