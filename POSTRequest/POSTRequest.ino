@@ -89,24 +89,24 @@ void loop() {
   P = Vout - 2.5;
 
   if (P * 1000 > 800.0) {
-    String messageContents = "{\"message\":\"up\"}";
-    client.emit("sensor", messageContents);
+    String messageContents = "{\"m\":\"u\"}";
+    client.emit("s", messageContents);
   } else if (P * 1000 > 200) {
-    String messageContents = "{\"message\":\"right\"}";
-    client.emit("sensor", messageContents);
+    String messageContents = "{\"m\":\"r\"}";
+    client.emit("s", messageContents);
   } else if (P * 1000 < -200.0) {
-    String messageContents = "{\"message\":\"left\"}";
-    client.emit("sensor", messageContents);
+    String messageContents = "{\"m\":\"l\"}";
+    client.emit("s", messageContents);
   } else {
-    String messageContents = "{\"message\":\"turn\"}";
-    client.emit("sensor", messageContents);
+    String messageContents = "{\"m\":\"t\"}";
+    client.emit("s", messageContents);
   }
 
-  String messageContents = "{\"pressure\":\"";
+  String messageContents = "{\"p\":\"";
   messageContents += P * 1000;
   messageContents += "\"}";
 
-  client.emit("pressure", messageContents);
+  client.emit("p", messageContents);
 
   delay(10);
 }
